@@ -1,66 +1,68 @@
 #!/usr/bin/python
 import sys, argparse, logging, pif, smtplib
-from pygodaddy import GoDaddyClient
 # Import the email modules we'll need
 from email.mime.text import MIMEText
 
-#this contain the config file
-import godaddy
+#Define constant parameters
+logfile="update_ip.log"
+smtpserver="gatorXYZ.hostgator.com"
+smtpport=465
+smtpuser="me@mydomain.com"
+smtppassword="myemailpassword"
+sender="me@mydomain.com"
+to="me@mydomain.com"
 
 #email function
 def email_update(body):
 	global smtplib
 	msg = MIMEText(body)
-	msg['From'] = godaddy.sender
-	msg['To'] = godaddy.to
+	msg['From'] = sender
+	msg['To'] = to
 	msg['Subject'] = 'IP address updater'
-	s = smtplib.SMTP(godaddy.smtpserver)
-	s.sendmail(godaddy.sender, godaddy.to, msg.as_string())
+	s = smtplib.SMTP_SSL(smtpserver,smtpport)
+	s.login(smtpuser,smtppassword)
+	s.sendmail(sender, to, msg.as_string())
 	s.quit()
 
+last_ip="0.0.0.0"
+def read_last_ip():
+	last_ip_f=open("last_ip.txt","r")
+	last_ip=last_ip_f.read()
+	last_ip_f.close()
+	return last_ip
+
+def write_new_ip(ip):
+	new_ip_f=open("last_ip.txt","w")
+	new_ip_f.write(ip)
+	new_ip_f.close()
+
 #command line arguments parsing
-parser = argparse.ArgumentParser('A Python script to do updates to a GoDaddy DNS host A record')
+parser = argparse.ArgumentParser('A Python script to notify when public IP changes')
 parser.add_argument('-v', '--verbose', action='store_true', help="send emails on 'no ip update required'")
 args = parser.parse_args()
 
 #start log file
-logging.basicConfig(filename=godaddy.logfile, format='%(asctime)s %(message)s', level=logging.INFO)
+logging.basicConfig(filename=logfile, format='%(asctime)s %(message)s', level=logging.INFO)
+
+#define last IP
+try:
+        last_ip=read_last_ip()
+except:
+        logging.warning("unable to read last IP. Creating file last_ip.txt")
+        write_new_ip(last_ip)
 
 #what is my public ip?
 public_ip = pif.get_public_ip()
 logging.info("My ip: {0}".format(public_ip))
 
-# login to GoDaddy DNS management
-# docs at https://pygodaddy.readthedocs.org/en/latest/
-client = GoDaddyClient()
-
-if client.login(godaddy.gduser, godaddy.gdpass):
-	# find out current dns record value. This can also be done with a quick nslookupA
-	# with something like socket.gethostbyname()
-	# however, this can include caching somewhere in the dns layers
-	# We could also use dnspython libraray, but that adds a lot of complexity
-
-	# use the GoDaddy object to find our current IP registered
-	domaininfo = client.find_dns_records(godaddy.domain)
-	for record in domaininfo:
-		if record.hostname == godaddy.host:
-			if record.value != public_ip:
-				logging.info("Update required: old {0}, new {1}".format(record.value, public_ip))
-				updateinfo = "old " + record.value + ", new " + public_ip
-				# This will fail if you try to set the same IP as already registered!
-				if client.update_dns_record(godaddy.host+"."+godaddy.domain, public_ip):
-					logging.info('Update OK')
-					email_update("Update OK!\n"+updateinfo)
-				else:
-					logging.info('Update DNS FAILED!')
-					email_update("Update failed!\n"+updateinfo)
-
-			else:
-				logging.info('No update required.')
-				if args.verbose:
-					email_update('No update required.')
-
+#Check if changed
+if last_ip != public_ip:
+	logging.info("Update required: old {0}, new {1}".format(last_ip, public_ip))
+        updateinfo = "old " + last_ip + ", new " + public_ip
+        # This will fail if you try to set the same IP as already registered!
+        email_update("Need manual update OK!\n"+updateinfo)
+	write_new_ip(public_ip)
 else:
-	logging.error('CANNOT login to GoDaddy')
-	email_update('ERROR: Cannot login to GoDaddy!')
-
+	logging.info('Public IP did not change.')
+        if args.verbose:
+        	email_update('No update required.')
