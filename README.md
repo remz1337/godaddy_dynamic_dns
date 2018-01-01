@@ -36,13 +36,16 @@ Installation:
   
   my installation:
   create shell script in home directory (nano ddns.sh)
+  
   #!/bin/bash
   python /home/pi/git/manual_dynamic_dns/update_ip.py
   
   add execute on script:
+  
   chmod +x ddns.sh
   
   run shell script from cron every hour, add this line with command crontab -e
+  
   0 */1 * * * /home/pi/ddns.sh
    
 
