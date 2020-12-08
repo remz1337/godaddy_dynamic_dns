@@ -14,27 +14,27 @@ to="me@mydomain.com"
 
 #email function
 def email_update(body):
-	global smtplib
-	msg = MIMEText(body)
-	msg['From'] = sender
-	msg['To'] = to
-	msg['Subject'] = 'IP address updater'
-	s = smtplib.SMTP_SSL(smtpserver,smtpport)
-	s.login(smtpuser,smtppassword)
-	s.sendmail(sender, to, msg.as_string())
-	s.quit()
+        global smtplib
+        msg = MIMEText(body)
+        msg['From'] = sender
+        msg['To'] = to
+        msg['Subject'] = 'IP address updater'
+        s = smtplib.SMTP_SSL(smtpserver,smtpport)
+        s.login(smtpuser,smtppassword)
+        s.sendmail(sender, to, msg.as_string())
+        s.quit()
 
 last_ip="0.0.0.0"
 def read_last_ip():
-	last_ip_f=open("last_ip.txt","r")
-	last_ip=last_ip_f.read()
-	last_ip_f.close()
-	return last_ip
+        last_ip_f=open("last_ip.txt","r")
+        last_ip=last_ip_f.read()
+        last_ip_f.close()
+        return last_ip
 
 def write_new_ip(ip):
-	new_ip_f=open("last_ip.txt","w")
-	new_ip_f.write(ip)
-	new_ip_f.close()
+        new_ip_f=open("last_ip.txt","w")
+        new_ip_f.write(ip)
+        new_ip_f.close()
 
 #command line arguments parsing
 parser = argparse.ArgumentParser('A Python script to notify when public IP changes')
@@ -57,12 +57,12 @@ logging.info("My ip: {0}".format(public_ip))
 
 #Check if changed
 if last_ip != public_ip:
-	logging.info("Update required: old {0}, new {1}".format(last_ip, public_ip))
+        logging.info("Update required: old {0}, new {1}".format(last_ip, public_ip))
         updateinfo = "old " + last_ip + ", new " + public_ip
         # This will fail if you try to set the same IP as already registered!
         email_update("Need manual update OK!\n"+updateinfo)
-	write_new_ip(public_ip)
+        write_new_ip(public_ip)
 else:
-	logging.info('Public IP did not change.')
+        logging.info('Public IP did not change.')
         if args.verbose:
-        	email_update('No update required.')
+                email_update('No update required.')
